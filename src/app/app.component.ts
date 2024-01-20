@@ -7,7 +7,7 @@ import { IMAGE_MIME_TYPES } from './constants/image-types.const';
 import { HttpErrorResponse } from '@angular/common/http';
 import { task } from './types/task.type';
 import { GeneratorService } from './services/generator.service';
-import { environment } from '../environments/environment';
+import { ActivityLogService } from './services/activity-log.service';
 
 @Component({
   selector: 'app-root',
@@ -67,11 +67,13 @@ export class AppComponent implements OnDestroy {
    * @param {AngularFirestore} _afs 
    * @param {CloudinaryService} _cloudinaryService
    * @param {GeneratorService} _generatorService
+   * @param {ActivityLogService} _activityLogService
    */
   public constructor(
     private _afs: AngularFirestore,
     private _cloudinaryService: CloudinaryService,
-    private _generatorService: GeneratorService
+    private _generatorService: GeneratorService,
+    private _activityLogService: ActivityLogService,
   ) { 
     this.getTasks();
   }
@@ -112,6 +114,7 @@ export class AppComponent implements OnDestroy {
     this.isLoading = true;
     try {
       await deleteDoc(doc(this._firestore, `tasks/${wid}`));
+      this._activityLogService.create({ action: "Delete", coreModuleAffected: "[Web App][Task][Delete]", status: true });
       // this._afs.collection("tasks").doc(wid).valueChanges().subscribe(async (task) => {
         // const castingTask = task as task.Data;
         // const timestamp = Math.floor(new Date().getTime() / 1000);
@@ -125,6 +128,7 @@ export class AppComponent implements OnDestroy {
         // }).subscribe((res) => {});
       // });
     } catch (e: any) {
+      this._activityLogService.create({ action: "Delete", coreModuleAffected: "[Web App][Task][Delete]", status: false });
       alert(e.message);
     } finally {
       this.isLoading = false;
@@ -149,7 +153,9 @@ export class AppComponent implements OnDestroy {
         await updateDoc(doc(this._firestore, `tasks/${wid}`), {
           ...task
         });
+        this._activityLogService.create({ action: "Update", coreModuleAffected: "[Web App][Task][Update]", status: true });
       } catch (e: any) {
+        this._activityLogService.create({ action: "Update", coreModuleAffected: "[Web App][Task][Update]", status: false });
         alert(e.message);
       }
     }, 250);
@@ -203,6 +209,7 @@ export class AppComponent implements OnDestroy {
             this.isLoading = false;
           }),
         ).subscribe(async (res) => {
+          this._activityLogService.create({ action: "Create", coreModuleAffected: "[Web App][Task][Create]", status: true });
           await addDoc(collection(this._firestore, "tasks"), {
             ...this.taskReq,
             imageURL: res.secure_url,
@@ -219,10 +226,12 @@ export class AppComponent implements OnDestroy {
         return;
       }
 
+      this._activityLogService.create({ action: "Create", coreModuleAffected: "[Web App][Task][Create]", status: true });
       await addDoc(collection(this._firestore, "tasks"), this.taskReq);
       this.isLoading = false;
       this._clearReq();
     } catch (e: any) {
+      this._activityLogService.create({ action: "Create", coreModuleAffected: "[Web App][Task][Create]", status: false });
       alert(e.message);
       this.isLoading = false;
     }

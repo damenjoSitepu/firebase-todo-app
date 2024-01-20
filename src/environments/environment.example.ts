@@ -15,4 +15,8 @@ export const environment = {
     apiSecret: "",
     uploadPresetName: "",
   },
+  ipInfo: {
+    url: "",
+    token: "",
+  },
 };
