@@ -1,5 +1,11 @@
 export namespace cloudinary {
-  export interface UploadResult {
+  export interface DeleteApiOptions {
+    resourceType: string;
+    publicId: string;
+    signature: string;
+    timestamp: number;
+  }
+  export interface UploadResultApi {
     access_mode: string;
     asset_id: string;
     bytes: number;

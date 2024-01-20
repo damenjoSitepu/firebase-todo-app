@@ -45,10 +45,26 @@ export class CloudinaryService {
    * @param {File} file
    * @returns {Observable<any>}
    */
-  public uploadImage(file: File): Observable<cloudinary.UploadResult> {
+  public uploadImage(file: File): Observable<cloudinary.UploadResultApi> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", environment.cloudinary.uploadPresetName);
-    return this._http.post<cloudinary.UploadResult>(`https://api.cloudinary.com/v1_1/${environment.cloudinary.cloudName}/image/upload`, formData);
+    return this._http.post<cloudinary.UploadResultApi>(`https://api.cloudinary.com/v1_1/${environment.cloudinary.cloudName}/image/upload`, formData);
+  }
+
+  /**
+   * Deleting Assets [ON DEVELOPMENT]
+   * @param options 
+   * @returns {Observable<any>}
+   */
+  public deleteAsset(options: cloudinary.DeleteApiOptions): Observable<any> {
+    const formData = new FormData();
+    formData.append("api_key", String(environment.cloudinary.apiKey));
+    formData.append("eager", "w_400,h_300,c_pad|w_260,h_200,c_crop");
+    formData.append("public_id", String(options.publicId));
+    formData.append("timestamp", String(options.timestamp));
+    formData.append("signature", String(options.signature));
+
+    return this._http.post<any>(`https://api.cloudinary.com/v1_1/${environment.cloudinary.cloudName}/${options.resourceType}/destroy`, formData);
   }
 }

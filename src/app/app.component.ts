@@ -1,19 +1,13 @@
 import { Component, OnDestroy, inject } from '@angular/core';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
-import { Firestore, addDoc, collection, collectionData, deleteDoc, doc, updateDoc } from '@angular/fire/firestore';
+import { Firestore, addDoc, collection, collectionData, deleteDoc, doc, getDoc, updateDoc } from '@angular/fire/firestore';
 import { Subscription, catchError, finalize, throwError } from 'rxjs';
 import { CloudinaryService } from './services/cloudinary.service';
 import { IMAGE_MIME_TYPES } from './constants/image-types.const';
 import { HttpErrorResponse } from '@angular/common/http';
-
-interface Task {
-  wid?: string;
-  isUpdateHandlerClicked?: boolean;
-  name: string;
-  isCompleted: boolean;
-  imageURL?: string;
-  imageObj?: File;
-};
+import { task } from './types/task.type';
+import { GeneratorService } from './services/generator.service';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -39,16 +33,28 @@ export class AppComponent implements OnDestroy {
   /**
    * Data
    */
-  protected tasks: Task[] = [];
+  protected tasks: task.ModifiedData[] = [];
+
+  /**
+   * File Object
+   */
+  protected taskFileObject: task.FileObject = {
+    image: null
+  };
 
   /**
    * Request
    */
-  protected taskReq: Task = {
+  protected taskReq: task.Request = {
     name: "",
     isCompleted: false,
-    imageObj: undefined,
     imageURL: "",
+    imageCreatedAt: "",
+    assetId: "",
+    resourceType: "",
+    type: "",
+    publicId: "",
+    signature: "",
   };
 
   /**
@@ -60,10 +66,12 @@ export class AppComponent implements OnDestroy {
    * Initialize Data
    * @param {AngularFirestore} _afs 
    * @param {CloudinaryService} _cloudinaryService
+   * @param {GeneratorService} _generatorService
    */
   public constructor(
     private _afs: AngularFirestore,
-    private _cloudinaryService: CloudinaryService
+    private _cloudinaryService: CloudinaryService,
+    private _generatorService: GeneratorService
   ) { 
     this.getTasks();
   }
@@ -80,8 +88,7 @@ export class AppComponent implements OnDestroy {
   protected async getTasks(): Promise<void> {
     try {
       this._tasksSub$ = collectionData(collection(this._firestore, 'tasks'), { idField: 'wid' }).subscribe((tasks) => {
-        if (tasks.length === 0) return;
-        this.tasks = (tasks as Task[]).map((task: Task) => {
+        this.tasks = (tasks as task.Data[]).map((task: task.Data) => {
           return {
             ...task,
             isUpdateHandlerClicked: false
@@ -104,6 +111,18 @@ export class AppComponent implements OnDestroy {
     if (!wid) return;
     try {
       await deleteDoc(doc(this._firestore, `tasks/${wid}`));
+      // this._afs.collection("tasks").doc(wid).valueChanges().subscribe(async (task) => {
+        // const castingTask = task as task.Data;
+        // const timestamp = Math.floor(new Date().getTime() / 1000);
+        // const signature = await this._generatorService.generateSHA1Signature(`eager=w_400,h_300,c_pad|w_260,h_200,c_crop&public_id=${castingTask.publicId}&timestamp=${timestamp}${environment.cloudinary.apiSecret}`);
+
+        // this._cloudinaryService.deleteAsset({
+        //   resourceType: castingTask.resourceType,
+        //   publicId: castingTask.publicId,
+        //   signature: signature,
+        //   timestamp: timestamp,
+        // }).subscribe((res) => {});
+      // });
     } catch (e: any) {
       alert(e.message);
     }
@@ -121,7 +140,7 @@ export class AppComponent implements OnDestroy {
     this._customCleartimeout = setTimeout(async () => {
       if (!wid || this.tasks.length === 0) return;
       try { 
-        const task: Task | undefined = this.tasks.find((task: Task) => task.wid === wid);
+        const task: task.Data | undefined = this.tasks.find((task: task.Data) => task.wid === wid);
         if (!task) return;
   
         await updateDoc(doc(this._firestore, `tasks/${wid}`), {
@@ -143,7 +162,7 @@ export class AppComponent implements OnDestroy {
   protected updateTask(e: any, wid?: string): void {
     if (!wid || this.tasks.length === 0) return;
     try {
-      this.tasks = [...this.tasks].map((task: Task) => {
+      this.tasks = [...this.tasks].map((task: task.ModifiedData) => {
         if (task.wid === wid) {
           return {
             ...task, 
@@ -171,8 +190,8 @@ export class AppComponent implements OnDestroy {
     try {
       this.isLoading = true;
 
-      if (this.taskReq.imageObj) {
-        this._cloudinaryService.uploadImage(this.taskReq.imageObj).pipe(
+      if (this.taskFileObject.image) {
+        this._cloudinaryService.uploadImage(this.taskFileObject.image).pipe(
           catchError((error: HttpErrorResponse) => {
             alert(error.error.error.message);
             return throwError(() => { });
@@ -182,19 +201,22 @@ export class AppComponent implements OnDestroy {
           }),
         ).subscribe(async (res) => {
           await addDoc(collection(this._firestore, "tasks"), {
-            name: this.taskReq.name,
-            isCompleted: this.taskReq.isCompleted,
+            ...this.taskReq,
             imageURL: res.secure_url,
+            imageCreatedAt: res.created_at,
+            assetId: res.asset_id,
+            resourceType: res.resource_type,
+            type: res.type,
+            publicId: res.public_id,
+            signature: res.signature,
           });
+          
           this._clearReq();
         });
         return;
       }
 
-      await addDoc(collection(this._firestore, "tasks"), {
-        name: this.taskReq.name,
-        isCompleted: this.taskReq.isCompleted,
-      });
+      await addDoc(collection(this._firestore, "tasks"), this.taskReq);
       this.isLoading = false;
       this._clearReq();
     } catch (e: any) {
@@ -229,7 +251,7 @@ export class AppComponent implements OnDestroy {
         return;
       }
 
-      this.taskReq.imageObj = selectedFile;
+      this.taskFileObject.image = selectedFile;
     } catch (e: any) {
       alert(e.message);
     }
@@ -244,8 +266,13 @@ export class AppComponent implements OnDestroy {
     this.taskReq = {
       name: "",
       isCompleted: false,
-      imageObj: undefined,
       imageURL: "",
+      imageCreatedAt: "",
+      assetId: "",
+      resourceType: "",
+      type: "",
+      publicId: "",
+      signature: "",
     };
     const imageInput = document.getElementById("imageInput") as HTMLInputElement;
     if (!imageInput) return;
