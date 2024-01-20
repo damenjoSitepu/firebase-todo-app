@@ -109,6 +109,7 @@ export class AppComponent implements OnDestroy {
    */
   protected async deleteTask(e: any, wid?: string): Promise<void> {
     if (!wid) return;
+    this.isLoading = true;
     try {
       await deleteDoc(doc(this._firestore, `tasks/${wid}`));
       // this._afs.collection("tasks").doc(wid).valueChanges().subscribe(async (task) => {
@@ -125,6 +126,8 @@ export class AppComponent implements OnDestroy {
       // });
     } catch (e: any) {
       alert(e.message);
+    } finally {
+      this.isLoading = false;
     }
   }
 

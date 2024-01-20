@@ -77,7 +77,7 @@
           </ng-container>         
         </td>
         <td>
-          <button (click)="deleteTask($event, task.wid)">Delete</button>
+          <button [disabled]="isLoading" (click)="deleteTask($event, task.wid)">Delete</button>
           <button (click)="updateTask($event, task.wid)">
             {{ !task.isUpdateHandlerClicked ? 'Update' : 'Cancel' }}
           </button>
