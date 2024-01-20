@@ -8,5 +8,11 @@ export const environment = {
     messagingSenderId: "",
     appId: "",
     measurementId: ""
-  }
+  },
+  cloudinary: {
+    cloudName: "",
+    apiKey: "",
+    apiSecret: "",
+    uploadPresetName: "",
+  },
 };

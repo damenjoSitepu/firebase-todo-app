@@ -1,13 +1,18 @@
 import { Component, OnDestroy, inject } from '@angular/core';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Firestore, addDoc, collection, collectionData, deleteDoc, doc, updateDoc } from '@angular/fire/firestore';
-import { Subscription } from 'rxjs';
+import { Subscription, catchError, finalize, throwError } from 'rxjs';
+import { CloudinaryService } from './services/cloudinary.service';
+import { IMAGE_MIME_TYPES } from './constants/image-types.const';
+import { HttpErrorResponse } from '@angular/common/http';
 
 interface Task {
   wid?: string;
   isUpdateHandlerClicked?: boolean;
   name: string;
   isCompleted: boolean;
+  imageURL?: string;
+  imageObj?: File;
 };
 
 @Component({
@@ -27,6 +32,11 @@ export class AppComponent implements OnDestroy {
   private _customCleartimeout: any = null;
 
   /**
+   * Loader
+   */
+  protected isLoading: boolean = false;
+
+  /**
    * Data
    */
   protected tasks: Task[] = [];
@@ -36,7 +46,9 @@ export class AppComponent implements OnDestroy {
    */
   protected taskReq: Task = {
     name: "",
-    isCompleted: false
+    isCompleted: false,
+    imageObj: undefined,
+    imageURL: "",
   };
 
   /**
@@ -47,9 +59,11 @@ export class AppComponent implements OnDestroy {
   /**
    * Initialize Data
    * @param {AngularFirestore} _afs 
+   * @param {CloudinaryService} _cloudinaryService
    */
   public constructor(
-    private _afs: AngularFirestore
+    private _afs: AngularFirestore,
+    private _cloudinaryService: CloudinaryService
   ) { 
     this.getTasks();
   }
@@ -75,7 +89,7 @@ export class AppComponent implements OnDestroy {
         });
       });
     } catch (e: any) {
-      console.log(e.message);
+      alert(e.message);
     }
   }
 
@@ -91,7 +105,7 @@ export class AppComponent implements OnDestroy {
     try {
       await deleteDoc(doc(this._firestore, `tasks/${wid}`));
     } catch (e: any) {
-      console.log(e.message);
+      alert(e.message);
     }
   }
 
@@ -114,7 +128,7 @@ export class AppComponent implements OnDestroy {
           ...task
         });
       } catch (e: any) {
-        console.log(e.message);
+        alert(e.message);
       }
     }, 250);
   }
@@ -143,7 +157,7 @@ export class AppComponent implements OnDestroy {
         }
       });
     } catch (e: any) {
-      console.log(e.message);
+      alert(e.message);
     }
   }
 
@@ -155,10 +169,69 @@ export class AppComponent implements OnDestroy {
    */
   protected async addTask(e: any): Promise<void> {
     try {
-      await addDoc(collection(this._firestore, "tasks"), this.taskReq);
+      this.isLoading = true;
+
+      if (this.taskReq.imageObj) {
+        this._cloudinaryService.uploadImage(this.taskReq.imageObj).pipe(
+          catchError((error: HttpErrorResponse) => {
+            alert(error.error.error.message);
+            return throwError(() => { });
+          }),
+          finalize(() => {
+            this.isLoading = false;
+          }),
+        ).subscribe(async (res) => {
+          await addDoc(collection(this._firestore, "tasks"), {
+            name: this.taskReq.name,
+            isCompleted: this.taskReq.isCompleted,
+            imageURL: res.secure_url,
+          });
+          this._clearReq();
+        });
+        return;
+      }
+
+      await addDoc(collection(this._firestore, "tasks"), {
+        name: this.taskReq.name,
+        isCompleted: this.taskReq.isCompleted,
+      });
+      this.isLoading = false;
       this._clearReq();
     } catch (e: any) {
-      console.log(e.message);
+      alert(e.message);
+      this.isLoading = false;
+    }
+  }
+
+  /**
+   * Change Image
+   * 
+   * @param {any} e
+   * @returns {void} 
+   */
+  protected changeImage(e: any): void {
+    try {
+      const selectedFile: File | undefined = e.target.files[0] || undefined;
+      if (!selectedFile) {
+        e.target.value = null;
+        return;
+      }
+
+      if (!IMAGE_MIME_TYPES.includes(selectedFile.type)) {
+        e.target.value = null;
+        alert("Sorry, but we only accepting image format!");
+        return;
+      }
+
+      if (selectedFile.size >= 100000) {
+        e.target.value = null;
+        alert("Sorry, but image size cannot greater than 100kb!");
+        return;
+      }
+
+      this.taskReq.imageObj = selectedFile;
+    } catch (e: any) {
+      alert(e.message);
     }
   }
 
@@ -171,6 +244,11 @@ export class AppComponent implements OnDestroy {
     this.taskReq = {
       name: "",
       isCompleted: false,
+      imageObj: undefined,
+      imageURL: "",
     };
+    const imageInput = document.getElementById("imageInput") as HTMLInputElement;
+    if (!imageInput) return;
+    imageInput.value = "";
   }
 }

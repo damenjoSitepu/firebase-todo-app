@@ -9,6 +9,8 @@ import { environment } from '../environments/environment';
 import { FormsModule } from '@angular/forms';
 import { AngularFireModule } from '@angular/fire/compat';
 import { AngularFireStorageModule } from '@angular/fire/compat/storage';
+import { CloudinaryModule } from '@cloudinary/ng';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -22,6 +24,8 @@ import { AngularFireStorageModule } from '@angular/fire/compat/storage';
     provideFirestore(() => getFirestore()),
     AngularFireModule.initializeApp(environment.firebase),
     AngularFireStorageModule,
+    CloudinaryModule,
+    HttpClientModule,
   ],
   providers: [],
   bootstrap: [AppComponent]

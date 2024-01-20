@@ -1,9 +1,24 @@
 <h1>Todo App Using Firebase</h1>
 
-<input type="text" [(ngModel)]="taskReq.name">
-<input type="checkbox" [(ngModel)]="taskReq.isCompleted">
-
-<button (click)="addTask($event)">Add Data</button>
+<form (submit)="addTask($event)" enctype="multipart/form-data">
+  <input 
+    type="text" 
+    [(ngModel)]="taskReq.name" 
+    name="name"
+  >
+  <input 
+    type="checkbox" 
+    [(ngModel)]="taskReq.isCompleted" 
+    name="createIsCompleted"
+  >
+  <input 
+    id="imageInput"
+    type="file" 
+    (change)="changeImage($event)" 
+    name="imageObj"
+  >
+  <button [disabled]="isLoading">Add Data</button>
+</form>
 
 <!-- Data -->
 <table border="1" style="margin-top: 10px;">
@@ -11,13 +26,17 @@
     <tr>
       <td>No.</td>
       <td>Name</td>
+      <td>Image</td>
       <td>Is Completed</td>
       <td>Actions</td>
     </tr>
   </thead>
   <ng-container *ngIf="tasks.length > 0">
     <tbody>
-      <tr *ngFor="let task of tasks; let i = index;"> 
+      <tr 
+        *ngFor="let task of tasks; 
+        let i = index;"
+      > 
         <td>{{ i + 1 }}</td>
         <td>
           <form (submit)="editTask($event, task.wid)">
@@ -25,16 +44,36 @@
               {{ task.name }}
             </ng-container>
             <ng-container *ngIf="task.isUpdateHandlerClicked">
-              <input type="text" [(ngModel)]="task.name" name="task">
+              <input 
+                type="text" 
+                [(ngModel)]="task.name" 
+                name="task"
+              >
             </ng-container>         
           </form>
+        </td>
+        <td>
+          <ng-container *ngIf="task.imageURL">
+            <img 
+              style="object-fit: cover;" 
+              width="75" 
+              height="75" 
+              [src]="task.imageURL" 
+              alt="Task Image"
+            >
+          </ng-container>
         </td>
         <td>
           <ng-container *ngIf="!task.isUpdateHandlerClicked">
             {{ task.isCompleted }}
           </ng-container>
           <ng-container *ngIf="task.isUpdateHandlerClicked">
-            <input type="checkbox" (change)="editTask($event, task.wid)" [(ngModel)]="task.isCompleted" name="isCompleted">
+            <input 
+              type="checkbox" 
+              (change)="editTask($event, task.wid)" 
+              [(ngModel)]="task.isCompleted" 
+              name="isCompleted"
+            >
           </ng-container>         
         </td>
         <td>
