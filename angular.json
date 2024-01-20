@@ -74,11 +74,6 @@
                 }
               ],
               "outputHashing": "all"
-            },
-            "development": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true
             }
           },
           "defaultConfiguration": "production"
@@ -88,12 +83,9 @@
           "configurations": {
             "production": {
               "buildTarget": "wafi:build:production"
-            },
-            "development": {
-              "buildTarget": "wafi:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "production"
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
@@ -119,6 +111,19 @@
             ],
             "scripts": []
           }
+        },
+        "deploy": {
+          "builder": "@angular/fire:deploy",
+          "options": {
+            "version": 2
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "wafi:build:production",
+              "serveTarget": "wafi:serve:production"
+            }
+          },
+          "defaultConfiguration": "production"
         }
       }
     }

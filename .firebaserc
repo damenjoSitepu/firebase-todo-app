@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "wafi-21": {
+      "hosting": {
+        "wafi": [
+          "wafi-21"
+        ]
+      }
+    }
+  },
+  "projects": {
+    "default": "wafi-21"
+  }
+}
